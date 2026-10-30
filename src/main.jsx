@@ -32,28 +32,52 @@ function App() {
     return result;
   }, []);
 
-  const applyState = useCallback((next) => {
-    if (!next) return;
-    setState(next);
-    if (next.server_now) setServerOffset(new Date(next.server_now).getTime() - Date.now());
-    setScreen(next.status === "finished" ? "finished" : next.status === "lobby" ? "lobby" : next.status === "reveal" ? "reveal" : "question");
-  }, []);
+  const applyState = useCallback((payload) => {
+    if (!payload) return;
+    const raw = payload.state || payload;
+    const mappedPlayers = (raw.players || []).map(p => ({
+      id: p.id, name: p.display_name ?? p.name, score: p.score || 0,
+      is_host: !!p.is_host, answered: !!(p.has_answered ?? p.answered),
+      waiting_next_round: !!p.waiting_next_round
+    }));
+    const me = mappedPlayers.find(p => p.id === playerId);
+    const waiting = !!me?.waiting_next_round && ["question","reveal"].includes(raw.global_status || raw.status);
+    const mapped = {
+      ...raw,
+      status: waiting ? "waiting" : (raw.global_status || raw.status),
+      players: mappedPlayers,
+      host_player_id: mappedPlayers.find(p => p.is_host)?.id,
+      question_number: (raw.question_index ?? 0) + 1,
+      question: raw.question ? {
+        question: raw.question.prompt ?? raw.question.question,
+        options: raw.question.options,
+        correct_index: raw.question.correct_index,
+        category: raw.question.category
+      } : null,
+      my_answer: me?.answered ? true : null,
+      reveal_until: raw.reveal_until || null
+    };
+    setState(mapped);
+    if (mapped.server_now) setServerOffset(new Date(mapped.server_now).getTime() - Date.now());
+    setScreen(mapped.status === "finished" ? "finished" : mapped.status === "lobby" ? "lobby" : mapped.status === "waiting" ? "waiting" : mapped.status === "reveal" ? "reveal" : "question");
+  }, [playerId]);
 
   const refresh = useCallback(async () => {
     if (!room || !playerId || !token) return;
     try {
       const next = await api("get_state", { code: room.code, player_id: playerId, token });
-      applyState(next);
+      applyState(next.state || next);
     } catch (e) { setError(e.message); }
   }, [room, playerId, token, api, applyState]);
 
   const perform = async (action, data = {}) => {
     setBusy(true); setError("");
     try {
-      const result = await api(action, { code: room?.code, player_id: playerId, token, ...data });
+      const serverAction = action === "answer" ? "submit_answer" : action;
+      const result = await api(serverAction, { code: room?.code, player_id: playerId, token, ...data });
       if (result?.state) applyState(result.state);
       else if (result?.status) applyState(result);
-      else await refresh();
+      else if (action !== "create_room") await refresh();
       return result;
     } catch (e) { setError(e.message); return null; }
     finally { setBusy(false); }
@@ -65,7 +89,8 @@ function App() {
     try {
       const result = await api("create_room", { name: name.trim() });
       setRoom({ code: result.code }); setPlayerId(result.player_id); setToken(result.token);
-      applyState(result.state); setScreen("lobby");
+      const initial = await api("get_state", { code: result.code, player_id: result.player_id, token: result.token });
+      applyState(initial.state || initial);
     } catch (e) { setError(e.message); }
     finally { setBusy(false); }
   };
@@ -76,7 +101,7 @@ function App() {
     try {
       const result = await api("join_room", { name: name.trim(), code: joinCode.trim().toUpperCase() });
       setRoom({ code: result.code }); setPlayerId(result.player_id); setToken(result.token);
-      applyState(result.state); setScreen(result.state?.status === "lobby" ? "lobby" : "waiting");
+      applyState(result.state || result);
     } catch (e) { setError(e.message); }
     finally { setBusy(false); }
   };
