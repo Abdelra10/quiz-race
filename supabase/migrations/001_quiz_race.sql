@@ -289,3 +289,7 @@ insert into public.quiz_questions(category,prompt,options,correct_index) values
 ('Food & Culture', 'Which spice is known for giving many curry dishes a yellow color?', '["Cinnamon", "Turmeric", "Paprika", "Nutmeg"]'::jsonb, 1),
 ('Food & Culture', 'What is the main ingredient in traditional hummus?', '["Lentils", "Chickpeas", "Black beans", "Peas"]'::jsonb, 1)
 on conflict do nothing;
+
+ 
+insert into public.quiz_questions(category,prompt,options,correct_index)
+values ('Geography', 'What is the capital of Portugal?', '["Porto", "Lisbon", "Madrid", "Seville"]'::jsonb, 1);
