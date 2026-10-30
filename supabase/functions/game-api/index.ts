@@ -33,8 +33,8 @@ Deno.serve(async (req) => {
       auth: { persistSession: false },
     });
 
-    // The database RPC is authoritative. Do not let a Realtime broadcast
-    // failure turn a successful game action into an HTTP error.
+    // The database RPC is authoritative. Realtime is only a notification
+    // optimization; clients also poll get_state.
     const { data: result, error } = await admin.rpc("game_action", {
       p_action: action,
       p_data: data,
@@ -60,17 +60,27 @@ Deno.serve(async (req) => {
 
       try {
         // httpSend takes the event name and payload as separate arguments.
-        // The payload is always a non-null object.
-        await channel.httpSend("state_changed", {
+        // Always pass a non-null object as the payload.
+        const broadcastResult = await channel.httpSend("state_changed", {
           action: String(action ?? "unknown"),
           at: new Date().toISOString(),
         });
+
+        if (!broadcastResult.success) {
+          console.warn(
+            "Quiz Race Realtime broadcast was not delivered; polling will recover:",
+            broadcastResult.status,
+            broadcastResult.error,
+          );
+        }
       } catch (broadcastError) {
-        // Clients also poll get_state, so broadcast delivery is only an
-        // optimization and must never fail the underlying game action.
-        console.warn("Quiz Race Realtime broadcast failed; polling will recover:", broadcastError);
+        // A thrown Realtime error must not undo or fail the game action.
+        console.warn(
+          "Quiz Race Realtime broadcast failed; polling will recover:",
+          broadcastError,
+        );
       } finally {
-        // Best-effort cleanup; cleanup errors must also remain non-fatal.
+        // Channel cleanup is also best-effort and must remain non-fatal.
         try {
           await admin.removeChannel(channel);
         } catch (cleanupError) {
