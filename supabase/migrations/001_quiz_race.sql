@@ -147,10 +147,10 @@ begin
       end if;
       delete from quiz_room_questions where room_id=v_room.id and round_number=v_new_round;
       insert into quiz_room_questions(room_id,round_number,question_order,question_id)
-        select v_room.id,v_new_round,row_number() over(order by random())::int-1,q.id
-        from quiz_questions q
-        where not exists(select 1 from quiz_used_questions u where u.room_id=v_room.id and u.question_id=q.id)
-        order by random() limit 12;
+        select v_room.id,v_new_round,(row_number() over())::int-1,s.id
+        from (select q.id from quiz_questions q
+              where not exists(select 1 from quiz_used_questions u where u.room_id=v_room.id and u.question_id=q.id)
+              order by random() limit 12) s;
       if (select count(*) from quiz_room_questions where room_id=v_room.id and round_number=v_new_round) < 12 then
         return jsonb_build_object('error','The question bank needs at least 12 unused questions.');
       end if;
