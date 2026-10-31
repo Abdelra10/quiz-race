@@ -54,6 +54,22 @@ Free tiers are intended for a small friend group, subject to provider limits and
 8. Host clicks Play Again. Confirm both players return to the lobby with scores reset.
 9. Join a room after a round starts from a third browser. Confirm the player appears under “Next round” and is included when the host starts the next round.
 
+
+## Live game
+
+Play Quiz Race here: **https://quiz-race-five.vercel.app/**
+
+## How to play
+1. Open the game link on your phone or computer. No account or app install is needed.
+2. Enter your player name and create a room, or enter a friend's four-letter room code to join.
+3. Share the room code with 1–7 friends (2–8 players total).
+4. The host starts the game when everyone is in the lobby.
+5. Answer each multiple-choice question before the 20-second timer ends. Answers lock once submitted.
+6. Correct answers earn up to 1,000 points; faster correct answers earn more. Incorrect or unanswered questions earn 0.
+7. Check the leaderboard after each question. The highest score after 12 questions wins.
+8. The host can select **Play Again** to start another round.
+
+
 ## Lite limitations
 - No account login; a random player session token is stored in the browser only for the current session.
 - No advanced reconnection/session recovery.
